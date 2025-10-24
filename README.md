@@ -57,7 +57,7 @@ uvicorn app.main:app --reload
 - ReDoc: http://localhost:8000/redoc
 - Health Check: http://localhost:8000/health
 
-## API Endpoints
+## API Endpoints [WIP]
 
 ### Authentication
 - `POST /auth/register` - Register new user
