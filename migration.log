@@ -1,0 +1,150 @@
+2025-11-01 18:20:33 | INFO | __main__ | 🚀 Starting database migration...
+2025-11-01 18:20:33 | INFO | __main__ | Database URL: postgresql://user:pa...
+2025-11-01 18:20:33 | INFO | app.core.database | Initializing database connection...
+2025-11-01 18:20:33 | ERROR | app.core.database | ❌ Database initialization failed: password authentication failed for user "user"
+2025-11-01 18:20:33 | ERROR | __main__ | ❌ Migration failed: password authentication failed for user "user"
+2025-11-01 18:24:20 | INFO | __main__ | 🚀 Starting database migration...
+2025-11-01 18:24:20 | INFO | __main__ | Database URL: postgresql://postgre...
+2025-11-01 18:24:20 | INFO | app.core.database | Initializing database connection...
+2025-11-01 18:24:20 | ERROR | app.core.database | ❌ Database initialization failed: password authentication failed for user "postgres"
+2025-11-01 18:24:20 | ERROR | __main__ | ❌ Migration failed: password authentication failed for user "postgres"
+2025-11-01 18:24:36 | INFO | __main__ | 🚀 Starting database migration...
+2025-11-01 18:24:36 | INFO | __main__ | Database URL: postgresql://postgre...
+2025-11-01 18:24:36 | INFO | app.core.database | Initializing database connection...
+2025-11-01 18:24:36 | ERROR | app.core.database | ❌ Database initialization failed: password authentication failed for user "postgres"
+2025-11-01 18:24:36 | ERROR | __main__ | ❌ Migration failed: password authentication failed for user "postgres"
+2025-11-01 18:28:25 | INFO | __main__ | 🚀 Starting database migration...
+2025-11-01 18:28:25 | INFO | __main__ | Database URL: postgresql://insight...
+2025-11-01 18:28:25 | INFO | app.core.database | Initializing database connection...
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | select pg_catalog.version()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | select current_schema()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | show standard_conforming_strings
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | SELECT 1
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [generated in 0.00011s] ()
+2025-11-01 18:28:25 | INFO | app.core.database | ✅ Database connection test successful
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | COMMIT
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [generated in 0.00022s] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [cached since 0.002126s ago] ('assets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [cached since 0.002549s ago] ('signals', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [cached since 0.002965s ago] ('portfolios', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [cached since 0.003485s ago] ('portfolio_positions', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | 
+CREATE TABLE users (
+	id SERIAL NOT NULL, 
+	email VARCHAR(255) NOT NULL, 
+	hashed_password VARCHAR(255) NOT NULL, 
+	is_active BOOLEAN NOT NULL, 
+	is_superuser BOOLEAN NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	CONSTRAINT pk_users PRIMARY KEY (id)
+)
+
+
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00011s] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | CREATE UNIQUE INDEX ix_users_email ON users (email)
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00014s] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_users_id ON users (id)
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00015s] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | 
+CREATE TABLE assets (
+	id SERIAL NOT NULL, 
+	symbol VARCHAR(32) NOT NULL, 
+	name VARCHAR(255), 
+	type VARCHAR(16) NOT NULL, 
+	exchange VARCHAR(64), 
+	currency VARCHAR(16), 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	CONSTRAINT pk_assets PRIMARY KEY (id)
+)
+
+
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00013s] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | CREATE UNIQUE INDEX ix_assets_symbol ON assets (symbol)
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00012s] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | 
+CREATE TABLE signals (
+	id SERIAL NOT NULL, 
+	asset_id INTEGER NOT NULL, 
+	timeframe VARCHAR(16) NOT NULL, 
+	as_of TIMESTAMP WITH TIME ZONE NOT NULL, 
+	rsi FLOAT, 
+	ema_fast FLOAT, 
+	ema_slow FLOAT, 
+	macd FLOAT, 
+	macd_signal FLOAT, 
+	bb_upper FLOAT, 
+	bb_middle FLOAT, 
+	bb_lower FLOAT, 
+	decision VARCHAR(8) NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	CONSTRAINT pk_signals PRIMARY KEY (id), 
+	CONSTRAINT fk_signals_asset_id_assets FOREIGN KEY(asset_id) REFERENCES assets (id) ON DELETE CASCADE
+)
+
+
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00012s] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_signals_asset_id ON signals (asset_id)
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00010s] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | 
+CREATE TABLE portfolios (
+	id SERIAL NOT NULL, 
+	user_id INTEGER NOT NULL, 
+	name VARCHAR(128) NOT NULL, 
+	description TEXT, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	CONSTRAINT pk_portfolios PRIMARY KEY (id), 
+	CONSTRAINT fk_portfolios_user_id_users FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
+)
+
+
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00012s] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_portfolios_user_id ON portfolios (user_id)
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00009s] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | 
+CREATE TABLE portfolio_positions (
+	id SERIAL NOT NULL, 
+	portfolio_id INTEGER NOT NULL, 
+	asset_id INTEGER NOT NULL, 
+	quantity FLOAT NOT NULL, 
+	avg_cost FLOAT NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	CONSTRAINT pk_portfolio_positions PRIMARY KEY (id), 
+	CONSTRAINT fk_portfolio_positions_portfolio_id_portfolios FOREIGN KEY(portfolio_id) REFERENCES portfolios (id) ON DELETE CASCADE, 
+	CONSTRAINT fk_portfolio_positions_asset_id_assets FOREIGN KEY(asset_id) REFERENCES assets (id) ON DELETE RESTRICT
+)
+
+
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00009s] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_portfolio_positions_portfolio_id ON portfolio_positions (portfolio_id)
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00008s] ()
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_portfolio_positions_asset_id ON portfolio_positions (asset_id)
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | [no key 0.00009s] ()
+2025-11-01 18:28:25 | INFO | app.core.database | ✅ Database tables created/verified
+2025-11-01 18:28:25 | INFO | sqlalchemy.engine.Engine | COMMIT
+2025-11-01 18:28:25 | INFO | __main__ | ✅ Database migration completed successfully!
+2025-11-01 18:28:25 | INFO | __main__ | 🎉 All tables created and ready for use.

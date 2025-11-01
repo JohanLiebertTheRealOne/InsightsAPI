@@ -374,9 +374,9 @@ async def get_market_summary_endpoint(
             timestamp=summary.get("timestamp", datetime.utcnow().isoformat()),
             market_status=summary.get("market_status", "unknown"),
             indices=summary.get("indices", {}),
-            top_gainers=[],  # Placeholder - would be implemented with real data
-            top_losers=[],   # Placeholder - would be implemented with real data
-            most_active=[]   # Placeholder - would be implemented with real data
+            top_gainers=summary.get("top_gainers", []),
+            top_losers=summary.get("top_losers", []),
+            most_active=summary.get("most_active", [])
         )
         
         logger.info("Successfully fetched market summary")

@@ -8,7 +8,7 @@ Represents a user's portfolio and its positions in assets.
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import String, Integer, DateTime, ForeignKey, Float
+from sqlalchemy import String, Integer, DateTime, ForeignKey, Float, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -27,6 +27,7 @@ class Portfolio(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(128), default="Default", nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="portfolios")
@@ -49,6 +50,17 @@ class PortfolioPosition(TimestampMixin, Base):
 
     quantity: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     avg_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    
+    # Alias property for compatibility with routes that use average_price
+    @property
+    def average_price(self) -> float:
+        """Alias for avg_cost for backward compatibility."""
+        return self.avg_cost
+    
+    @average_price.setter
+    def average_price(self, value: float) -> None:
+        """Setter for average_price that updates avg_cost."""
+        self.avg_cost = value
 
     # Relationships
     portfolio: Mapped[Portfolio] = relationship(back_populates="positions")

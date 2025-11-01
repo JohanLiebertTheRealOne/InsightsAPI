@@ -32,6 +32,7 @@ from app.core.database import get_db
 from app.core.logging import get_logger
 from app.services.alphavantage_service import get_multiple_prices
 from app.services.analysis_service import compute_signal_bundle, get_market_overview
+from app.services.asset_service import batch_get_metadata, get_sector_for_symbol, get_industry_for_symbol
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -279,24 +280,35 @@ async def screen_assets(
             # Get technical analysis
             signal_data = await compute_signal_bundle(symbol)
             
+            # Get asset metadata
+            asset_metadata = await batch_get_metadata([symbol])
+            metadata = asset_metadata.get(symbol, {})
+            
+            # Get fundamentals if available
+            from app.services.asset_service import get_fundamentals
+            fundamentals = await get_fundamentals(symbol)
+            
             # Calculate score based on strategy
             score = calculate_screening_score(symbol, data, signal_data, request.strategy)
             
-            # Create screened asset
+            # Create screened asset with real metadata
+            sector = metadata.get("sector") or await get_sector_for_symbol(symbol)
+            industry = metadata.get("industry") or await get_industry_for_symbol(symbol)
+            
             asset = ScreenedAsset(
                 symbol=symbol,
-                name=f"{symbol} Corporation",  # Placeholder
-                sector=get_sector_for_symbol(symbol),
-                industry=get_industry_for_symbol(symbol),
+                name=metadata.get("name", f"{symbol} Corporation"),
+                sector=sector,
+                industry=industry,
                 price=data["current_price"],
                 change=data.get("change", 0.0),
                 change_percent=data.get("change_percent", 0.0),
                 volume=data.get("volume", 0),
-                market_cap=data.get("current_price", 0) * 1000000,  # Placeholder
-                pe_ratio=15.0 + (hash(symbol) % 20),  # Placeholder
-                pb_ratio=1.0 + (hash(symbol) % 3),  # Placeholder
-                dividend_yield=2.0 + (hash(symbol) % 5),  # Placeholder
-                beta=0.8 + (hash(symbol) % 1.5),  # Placeholder
+                market_cap=fundamentals.get("market_cap") or (data.get("current_price", 0) * 1000000),  # Use real if available
+                pe_ratio=fundamentals.get("pe_ratio"),
+                pb_ratio=fundamentals.get("pb_ratio"),
+                dividend_yield=fundamentals.get("dividend_yield"),
+                beta=fundamentals.get("beta") or metadata.get("beta", 1.0),
                 score=score,
                 rank=0,  # Will be set after sorting
                 signal=signal_data["signal"] if signal_data else "HOLD",
@@ -564,24 +576,5 @@ def calculate_screening_score(symbol: str, price_data: Dict, signal_data: Option
     return max(0, min(100, score))
 
 
-def get_sector_for_symbol(symbol: str) -> str:
-    """Get sector for a symbol (simplified)."""
-    sector_map = {
-        "AAPL": "Technology", "GOOGL": "Technology", "MSFT": "Technology", "NVDA": "Technology",
-        "JPM": "Financial", "BAC": "Financial", "WFC": "Financial", "GS": "Financial",
-        "JNJ": "Healthcare", "PFE": "Healthcare", "UNH": "Healthcare", "ABBV": "Healthcare",
-        "KO": "Consumer", "PEP": "Consumer", "WMT": "Consumer", "PG": "Consumer"
-    }
-    return sector_map.get(symbol, "Other")
-
-
-def get_industry_for_symbol(symbol: str) -> str:
-    """Get industry for a symbol (simplified)."""
-    industry_map = {
-        "AAPL": "Consumer Electronics", "GOOGL": "Internet Services", "MSFT": "Software",
-        "JPM": "Banking", "BAC": "Banking", "WFC": "Banking",
-        "JNJ": "Pharmaceuticals", "PFE": "Pharmaceuticals", "UNH": "Health Insurance"
-    }
-    return industry_map.get(symbol, "General")
 
 

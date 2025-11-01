@@ -35,7 +35,7 @@ echo "✅ Database '$DB_NAME' is ready"
 
 # Run migration
 echo "🔄 Running database migration..."
-python migrate.py
+python3 migrate.py
 
 echo "🎉 Database setup completed!"
 echo ""
@@ -43,4 +43,4 @@ echo "Next steps:"
 echo "1. Create a .env file with your configuration"
 echo "2. Install dependencies: pip install -r requirements.txt"
 echo "3. Start Redis: redis-server"
-echo "4. Run the API: uvicorn app.main:app --reload"
+echo "4. Run the API: python3 -m uvicorn app.main:app --reload"

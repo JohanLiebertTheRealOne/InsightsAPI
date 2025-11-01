@@ -25,10 +25,13 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from pydantic import BaseModel, Field, validator
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.core.security import get_current_user
 from app.core.database import get_db
 from app.core.logging import get_logger
+from app.models.asset import Asset
+from app.models.signal import Signal
 from app.services.analysis_service import (
     compute_signal_bundle,
     get_market_overview,
@@ -190,6 +193,7 @@ async def get_signal(
                 status_code=404,
                 detail=f"Unable to compute signal analysis for '{symbol}'"
             )
+        
         
         # Convert to response model
         response = SignalResponse(
@@ -388,7 +392,8 @@ async def get_market_signal_overview(
 async def get_signal_history(
     symbol: str = Path(..., description="Symbol to analyze"),
     days: int = Query(30, ge=1, le=365, description="Number of days of history"),
-    user=Depends(get_current_user)
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ) -> SignalHistoryResponse:
     """
     Get historical signal analysis for a symbol.
@@ -400,6 +405,7 @@ async def get_signal_history(
         symbol: Asset symbol to analyze
         days: Number of days of historical data
         user: Authenticated user
+        db: Database session
         
     Returns:
         SignalHistoryResponse: Historical signal data
@@ -410,26 +416,57 @@ async def get_signal_history(
     try:
         symbol_upper = symbol.upper().strip()
         
-        logger.info(f"Computing signal history for {symbol_upper} ({days} days)")
+        logger.info(f"Fetching signal history for {symbol_upper} ({days} days)")
         
-        # For demo purposes, generate synthetic historical signals
-        # In production, this would query a database of historical signals
+        # Get asset from database
+        asset_result = await db.execute(select(Asset).where(Asset.symbol == symbol_upper))
+        asset = asset_result.scalar_one_or_none()
+        
+        if not asset:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Asset '{symbol}' not found"
+            )
+        
+        # Query historical signals from database
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        
+        signals_result = await db.execute(
+            select(Signal).where(
+                Signal.asset_id == asset.id,
+                Signal.as_of >= cutoff_date
+            ).order_by(Signal.as_of.desc())
+        )
+        db_signals = signals_result.scalars().all()
+        
+        # Convert database signals to response format
         signals = []
-        base_date = datetime.utcnow() - timedelta(days=days)
-        
-        for i in range(days):
-            date = base_date + timedelta(days=i)
-            
-            # Generate synthetic signal data
+        for sig in db_signals:
             signal_data = {
-                "date": date.strftime("%Y-%m-%d"),
-                "signal": ["BUY", "SELL", "HOLD"][i % 3],
-                "confidence": 60 + (i % 40),
-                "rsi": 30 + (i % 40),
-                "price": 100 + (i % 20),
-                "reasoning": f"Historical signal for {date.strftime('%Y-%m-%d')}"
+                "date": sig.as_of.strftime("%Y-%m-%d"),
+                "signal": sig.decision,
+                "confidence": 50.0,  # Signal model doesn't store confidence, use default
+                "rsi": float(sig.rsi) if sig.rsi is not None else None,
+                "price": None,  # Signal model doesn't store price
+                "reasoning": f"Signal generated on {sig.as_of.strftime('%Y-%m-%d')}"
             }
             signals.append(signal_data)
+        
+        # If we have fewer signals than requested, we can fill with recent computations
+        # but for now, just return what we have
+        if len(signals) == 0:
+            logger.info(f"No historical signals found for {symbol_upper}, generating recent signal")
+            # Generate a current signal to show recent data
+            current_result = await compute_signal_bundle(symbol_upper)
+            if current_result:
+                signals.append({
+                    "date": datetime.utcnow().strftime("%Y-%m-%d"),
+                    "signal": current_result.get("signal", "HOLD"),
+                    "confidence": current_result.get("confidence", 50.0),
+                    "rsi": current_result.get("indicators", {}).get("rsi"),
+                    "price": current_result.get("current_price"),
+                    "reasoning": "Current signal analysis"
+                })
         
         response = SignalHistoryResponse(
             symbol=symbol_upper,
@@ -437,7 +474,7 @@ async def get_signal_history(
             signals=signals
         )
         
-        logger.info(f"Successfully generated {days} days of signal history for {symbol_upper}")
+        logger.info(f"Successfully retrieved {len(signals)} historical signals for {symbol_upper}")
         return response
         
     except Exception as e:

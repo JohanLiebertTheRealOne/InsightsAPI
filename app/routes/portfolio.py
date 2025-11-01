@@ -35,6 +35,7 @@ from app.models.user import User
 from app.models.portfolio import Portfolio, PortfolioPosition
 from app.models.asset import Asset
 from app.services.alphavantage_service import get_multiple_prices
+from app.services.portfolio_service import compute_portfolio_metrics_for_analytics
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -342,12 +343,26 @@ async def get_portfolio(
         for position in positions:
             allocation[position.asset_symbol] = position.weight
         
-        # Calculate risk metrics (simplified)
+        # Calculate real risk metrics using portfolio service
+        positions_for_metrics = [
+            {
+                "asset_symbol": pos.asset_symbol,
+                "quantity": pos.quantity,
+                "average_price": pos.average_price,
+                "current_price": pos.current_price,
+                "market_value": pos.market_value
+            }
+            for pos in positions
+        ]
+        
+        from app.services.portfolio_service import calculate_portfolio_metrics
+        risk_metrics_data = await calculate_portfolio_metrics(positions_for_metrics, current_prices)
+        
         risk_metrics = {
-            "volatility": 15.0,  # Placeholder
-            "sharpe_ratio": 1.2,  # Placeholder
-            "beta": 1.0,  # Placeholder
-            "max_drawdown": -5.0  # Placeholder
+            "volatility": risk_metrics_data.get("volatility", 0.0) * 100,  # Convert to percentage
+            "sharpe_ratio": risk_metrics_data.get("sharpe_ratio", 0.0),
+            "beta": risk_metrics_data.get("beta", 1.0),
+            "max_drawdown": risk_metrics_data.get("max_drawdown", 0.0) * 100  # Convert to percentage
         }
         
         response = PortfolioResponse(
@@ -571,13 +586,17 @@ async def add_position(
         asset = asset_result.scalar_one_or_none()
         
         if not asset:
-            # Create new asset
+            # Get asset metadata
+            from app.services.asset_service import get_asset_metadata
+            metadata = await get_asset_metadata(request.asset_symbol.upper(), db)
+            
+            # Create new asset with metadata
             asset = Asset(
                 symbol=request.asset_symbol.upper(),
-                name=f"{request.asset_symbol.upper()} Corporation",  # Placeholder
-                asset_type="stock",  # Placeholder
-                exchange="NASDAQ",  # Placeholder
-                currency="USD"  # Placeholder
+                name=metadata.get("name", f"{request.asset_symbol.upper()} Corporation"),
+                type=metadata.get("type", "stock"),
+                exchange=metadata.get("exchange", "NASDAQ"),
+                currency=metadata.get("currency", "USD")
             )
             db.add(asset)
             await db.flush()  # Get the ID
@@ -608,7 +627,7 @@ async def add_position(
                 portfolio_id=portfolio_id,
                 asset_id=asset.id,
                 quantity=request.quantity,
-                average_price=request.average_price
+                avg_cost=request.average_price
             )
             db.add(position)
         
@@ -625,6 +644,173 @@ async def add_position(
         raise HTTPException(
             status_code=500,
             detail="Internal server error while adding position"
+        )
+
+
+@router.put("/{portfolio_id}/positions/{position_id}", summary="Update Position")
+async def update_position(
+    portfolio_id: int = Path(..., description="Portfolio ID"),
+    position_id: int = Path(..., description="Position ID"),
+    request: UpdatePositionRequest = None,
+    user=Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Update an existing position in a portfolio.
+    
+    Args:
+        portfolio_id: Portfolio ID
+        position_id: Position ID
+        request: Position update data (quantity and/or average_price)
+        user: Authenticated user
+        db: Database session
+        
+    Returns:
+        Dict: Position update result
+        
+    Raises:
+        HTTPException: If portfolio/position not found or update fails
+    """
+    try:
+        logger.info(f"Updating position {position_id} in portfolio {portfolio_id}")
+        
+        # Verify portfolio ownership
+        portfolio_result = await db.execute(
+            select(Portfolio).where(
+                and_(Portfolio.id == portfolio_id, Portfolio.user_id == user.id)
+            )
+        )
+        portfolio = portfolio_result.scalar_one_or_none()
+        
+        if not portfolio:
+            raise HTTPException(
+                status_code=404,
+                detail="Portfolio not found or access denied"
+            )
+        
+        # Get position
+        position_result = await db.execute(
+            select(PortfolioPosition).where(
+                and_(
+                    PortfolioPosition.id == position_id,
+                    PortfolioPosition.portfolio_id == portfolio_id
+                )
+            )
+        )
+        position = position_result.scalar_one_or_none()
+        
+        if not position:
+            raise HTTPException(
+                status_code=404,
+                detail="Position not found or access denied"
+            )
+        
+        # Update fields
+        if request.quantity is not None:
+            if request.quantity <= 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Quantity must be greater than 0"
+                )
+            position.quantity = request.quantity
+        
+        if request.average_price is not None:
+            if request.average_price <= 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Average price must be greater than 0"
+                )
+            position.avg_cost = request.average_price
+        
+        position.updated_at = datetime.utcnow()
+        
+        await db.commit()
+        
+        logger.info(f"Successfully updated position {position_id} in portfolio {portfolio_id}")
+        return {"message": "Position updated successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating position {position_id}: {e}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error while updating position"
+        )
+
+
+@router.delete("/{portfolio_id}/positions/{position_id}", summary="Delete Position")
+async def delete_position(
+    portfolio_id: int = Path(..., description="Portfolio ID"),
+    position_id: int = Path(..., description="Position ID"),
+    user=Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, str]:
+    """
+    Delete a position from a portfolio.
+    
+    Args:
+        portfolio_id: Portfolio ID
+        position_id: Position ID
+        user: Authenticated user
+        db: Database session
+        
+    Returns:
+        Dict: Success message
+        
+    Raises:
+        HTTPException: If portfolio/position not found or deletion fails
+    """
+    try:
+        logger.info(f"Deleting position {position_id} from portfolio {portfolio_id}")
+        
+        # Verify portfolio ownership
+        portfolio_result = await db.execute(
+            select(Portfolio).where(
+                and_(Portfolio.id == portfolio_id, Portfolio.user_id == user.id)
+            )
+        )
+        portfolio = portfolio_result.scalar_one_or_none()
+        
+        if not portfolio:
+            raise HTTPException(
+                status_code=404,
+                detail="Portfolio not found or access denied"
+            )
+        
+        # Get position
+        position_result = await db.execute(
+            select(PortfolioPosition).where(
+                and_(
+                    PortfolioPosition.id == position_id,
+                    PortfolioPosition.portfolio_id == portfolio_id
+                )
+            )
+        )
+        position = position_result.scalar_one_or_none()
+        
+        if not position:
+            raise HTTPException(
+                status_code=404,
+                detail="Position not found or access denied"
+            )
+        
+        # Delete position
+        await db.delete(position)
+        await db.commit()
+        
+        logger.info(f"Successfully deleted position {position_id} from portfolio {portfolio_id}")
+        return {"message": "Position deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting position {position_id}: {e}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error while deleting position"
         )
 
 
@@ -665,44 +851,126 @@ async def get_portfolio_analytics(
                 detail="Portfolio not found or access denied"
             )
         
-        # For demo purposes, return synthetic analytics
-        # In production, this would calculate real metrics
+        # Query positions
+        positions_result = await db.execute(
+            select(PortfolioPosition, Asset).join(Asset).where(
+                PortfolioPosition.portfolio_id == portfolio_id
+            )
+        )
+        positions_data = positions_result.all()
+        
+        if not positions_data:
+            # Return empty analytics for portfolio with no positions
+            analytics = PortfolioAnalyticsResponse(
+                portfolio_id=portfolio_id,
+                timestamp=datetime.utcnow().isoformat(),
+                performance_metrics={
+                    "total_return": 0.0,
+                    "annualized_return": 0.0,
+                    "volatility": 0.0,
+                    "sharpe_ratio": 0.0,
+                    "max_drawdown": 0.0,
+                    "win_rate": 0.0
+                },
+                risk_metrics={
+                    "beta": 0.0,
+                    "alpha": 0.0,
+                    "var_95": 0.0,
+                    "expected_shortfall": 0.0
+                },
+                allocation_analysis={
+                    "sector_allocation": {},
+                    "asset_allocation": {}
+                },
+                recommendations=[
+                    "Add positions to start tracking portfolio performance"
+                ]
+            )
+            logger.info(f"Returned empty analytics for portfolio {portfolio_id} with no positions")
+            return analytics
+        
+        # Get current prices for all positions
+        symbols = [pos.Asset.symbol for pos in positions_data]
+        current_prices = await get_multiple_prices(symbols) if symbols else {}
+        
+        # Calculate real portfolio metrics
+        metrics = await compute_portfolio_metrics_for_analytics(
+            portfolio_id, positions_data, current_prices
+        )
+        
+        # Calculate allocation analysis
+        total_value = 0.0
+        sector_allocation = {}
+        asset_allocation = {}
+        
+        for position, asset in positions_data:
+            current_price = current_prices.get(asset.symbol, {}).get("current_price", position.avg_cost)
+            market_value = position.quantity * current_price
+            total_value += market_value
+            
+            # Sector allocation (simplified - would need real sector data)
+            sector = getattr(asset, 'sector', 'Other') or 'Other'
+            sector_allocation[sector] = sector_allocation.get(sector, 0.0) + market_value
+            
+            # Asset type allocation
+            asset_type = asset.type or 'stock'
+            asset_allocation[asset_type.capitalize()] = asset_allocation.get(asset_type.capitalize(), 0.0) + market_value
+        
+        # Convert to percentages
+        if total_value > 0:
+            sector_allocation = {k: (v / total_value * 100) for k, v in sector_allocation.items()}
+            asset_allocation = {k: (v / total_value * 100) for k, v in asset_allocation.items()}
+        
+        # Generate recommendations based on metrics
+        recommendations = []
+        
+        if metrics.get("diversification_score", 0) < 30:
+            recommendations.append("Portfolio is highly concentrated. Consider diversifying across more assets.")
+        
+        if metrics.get("beta", 1.0) > 1.3:
+            recommendations.append("Portfolio has high market sensitivity. Consider reducing exposure to high-beta assets.")
+        
+        if metrics.get("sharpe_ratio", 0) < 0.5:
+            recommendations.append("Risk-adjusted returns are low. Consider rebalancing for better risk-return profile.")
+        
+        if metrics.get("volatility", 0) > 0.25:
+            recommendations.append("Portfolio volatility is high. Consider adding defensive positions to reduce risk.")
+        
+        if not recommendations:
+            recommendations.append("Portfolio metrics are within acceptable ranges. Continue monitoring performance.")
+        
+        # Calculate alpha (simplified: assume market return of 10%)
+        market_return = 0.10
+        portfolio_return = metrics.get("annualized_return", 0.0)
+        beta = metrics.get("beta", 1.0)
+        alpha = portfolio_return - (metrics.get("risk_free_rate", 0.02) + beta * (market_return - metrics.get("risk_free_rate", 0.02)))
+        
+        # Calculate VaR (simplified: 95% VaR = -2 * volatility)
+        var_95 = -2.0 * metrics.get("volatility", 0.0) if metrics.get("volatility", 0.0) > 0 else 0.0
+        expected_shortfall = var_95 * 1.5  # Simplified calculation
+        
         analytics = PortfolioAnalyticsResponse(
             portfolio_id=portfolio_id,
             timestamp=datetime.utcnow().isoformat(),
             performance_metrics={
-                "total_return": 12.5,
-                "annualized_return": 15.2,
-                "volatility": 18.3,
-                "sharpe_ratio": 1.2,
-                "max_drawdown": -8.5,
-                "win_rate": 65.0
+                "total_return": metrics.get("total_return", 0.0) * 100,  # Convert to percentage
+                "annualized_return": metrics.get("annualized_return", 0.0) * 100,
+                "volatility": metrics.get("volatility", 0.0) * 100,
+                "sharpe_ratio": metrics.get("sharpe_ratio", 0.0),
+                "max_drawdown": metrics.get("max_drawdown", 0.0) * 100,
+                "win_rate": 65.0  # Would need trade history to calculate accurately
             },
             risk_metrics={
-                "beta": 1.1,
-                "alpha": 2.3,
-                "var_95": -3.2,
-                "expected_shortfall": -5.1
+                "beta": metrics.get("beta", 1.0),
+                "alpha": alpha * 100,
+                "var_95": var_95,
+                "expected_shortfall": expected_shortfall
             },
             allocation_analysis={
-                "sector_allocation": {
-                    "Technology": 35.0,
-                    "Healthcare": 20.0,
-                    "Finance": 15.0,
-                    "Consumer": 10.0,
-                    "Other": 20.0
-                },
-                "asset_allocation": {
-                    "Stocks": 80.0,
-                    "Bonds": 15.0,
-                    "Cash": 5.0
-                }
+                "sector_allocation": sector_allocation,
+                "asset_allocation": asset_allocation
             },
-            recommendations=[
-                "Consider increasing diversification in healthcare sector",
-                "Rebalance portfolio to maintain target allocation",
-                "Monitor high-beta positions for risk management"
-            ]
+            recommendations=recommendations
         )
         
         logger.info(f"Successfully computed analytics for portfolio {portfolio_id}")

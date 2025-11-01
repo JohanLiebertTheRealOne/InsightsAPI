@@ -488,10 +488,10 @@ async def search_symbols(query: str, limit: int = 10) -> List[Dict[str, Any]]:
 
 async def get_market_summary() -> Dict[str, Any]:
     """
-    Get overall market summary and indices.
+    Get overall market summary and indices with top gainers/losers/most active.
     
     Returns:
-        Dict: Market summary data
+        Dict: Market summary data including top movers
     """
     try:
         # Get major indices
@@ -499,10 +499,69 @@ async def get_market_summary() -> Dict[str, Any]:
         
         index_data = await get_multiple_prices(indices)
         
+        # Get a broad universe of stocks for market breadth
+        market_universe = [
+            "AAPL", "GOOGL", "MSFT", "AMZN", "TSLA", "NVDA", "META", "NFLX",
+            "JPM", "BAC", "WFC", "GS", "MS", "C", "AXP", "V", "MA",
+            "JNJ", "PFE", "UNH", "ABBV", "MRK", "TMO", "ABT", "DHR",
+            "KO", "PEP", "WMT", "PG", "HD", "DIS", "NKE", "BA", "CAT"
+        ]
+        
+        # Get prices for market universe
+        universe_prices = await get_multiple_prices(market_universe)
+        
+        # Calculate top gainers, losers, and most active
+        top_gainers = []
+        top_losers = []
+        most_active = []
+        
+        for symbol, data in universe_prices.items():
+            if not data:
+                continue
+            
+            change_percent = data.get("change_percent", 0.0)
+            volume = data.get("volume", 0)
+            
+            # Top gainers
+            if change_percent > 0:
+                top_gainers.append({
+                    "symbol": symbol,
+                    "price": data["current_price"],
+                    "change": data.get("change", 0.0),
+                    "change_percent": change_percent,
+                    "volume": volume
+                })
+            
+            # Top losers
+            if change_percent < 0:
+                top_losers.append({
+                    "symbol": symbol,
+                    "price": data["current_price"],
+                    "change": data.get("change", 0.0),
+                    "change_percent": change_percent,
+                    "volume": volume
+                })
+            
+            # Most active (by volume)
+            most_active.append({
+                "symbol": symbol,
+                "price": data["current_price"],
+                "volume": volume,
+                "change_percent": change_percent
+            })
+        
+        # Sort and limit results
+        top_gainers.sort(key=lambda x: x["change_percent"], reverse=True)
+        top_losers.sort(key=lambda x: x["change_percent"])
+        most_active.sort(key=lambda x: x["volume"], reverse=True)
+        
         summary = {
             "timestamp": datetime.utcnow().isoformat(),
             "indices": {},
-            "market_status": "open"  # Simplified - would need real market hours logic
+            "market_status": "open",  # Simplified - would need real market hours logic
+            "top_gainers": top_gainers[:10],  # Top 10
+            "top_losers": top_losers[:10],    # Bottom 10
+            "most_active": most_active[:10]   # Top 10 by volume
         }
         
         for symbol, data in index_data.items():
